@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FRACTALIS — Observatory of Infinite Objects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;1,300;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0a08;
+    --ink:#e9e2d4;
+    --dim:rgba(233,226,212,.55);
+    --faint:rgba(233,226,212,.14);
+    --hair:rgba(233,226,212,.09);
+    --amber:#d9a05b;
+    --amber-hi:#f0be7d;
+    --amber-dim:rgba(217,160,91,.10);
+    --mono:'IBM Plex Mono',monospace;
+    --disp:'Fraunces',serif;
+    --err:#e0705a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--mono);-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+
+  #view{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:0;
+    cursor:grab;transition:opacity .45s ease}
+  #view.grabbing{cursor:grabbing}
+  #view.faded{opacity:0}
+
+  #hd{position:fixed;top:28px;left:32px;z-index:10;pointer-events:none;
+    user-select:none;transition:opacity .5s,transform .5s}
+  #hd h1{font-family:var(--disp);font-weight:300;font-style:italic;
+    font-size:44px;letter-spacing:.02em;line-height:1;color:var(--ink)}
+  #hd h1 em{font-style:normal;color:var(--amber)}
+  #hd .tagline{margin-top:10px;font-size:9px;letter-spacing:.24em;color:var(--dim)}
+  #hd .current{margin-top:22px;font-size:10px;letter-spacing:.18em;color:var(--amber)}
+  #hd .current b{font-weight:500;color:var(--amber)}
+  #hd .current::before{content:"";display:inline-block;width:22px;height:1px;
+    background:var(--amber);vertical-align:middle;margin-right:10px}
+
+  #panel{position:fixed;top:16px;right:16px;bottom:16px;width:300px;z-index:20;
+    background:rgba(14,13,11,.84);backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border:1px solid var(--hair);border-left:1px solid var(--faint);
+    display:flex;flex-direction:column;
+    transition:transform .45s cubic-bezier(.4,0,.2,1),opacity .5s}
+  body.folded #panel{transform:translateX(calc(100% + 20px))}
+  #panel .scroll{flex:1;overflow-y:auto;padding:6px 20px 12px;scrollbar-width:thin;
+    scrollbar-color:var(--faint) transparent}
+  #panel .scroll::-webkit-scrollbar{width:4px}
+  #panel .scroll::-webkit-scrollbar-thumb{background:var(--faint)}
+
+  #foldBtn{position:absolute;top:10px;right:10px;width:26px;height:26px;
+    display:flex;align-items:center;justify-content:center;color:var(--dim);
+    border:1px solid transparent;transition:.2s}
+  #foldBtn:hover{color:var(--amber);border-color:var(--faint)}
+
+  section{margin-top:22px}
+  section h2{display:flex;align-items:baseline;gap:10px;font-weight:400;
+    font-size:9px;letter-spacing:.26em;color:var(--dim);text-transform:uppercase;
+    padding-bottom:8px;border-bottom:1px solid var(--hair);margin-bottom:10px}
+  section h2 span{color:var(--amber);font-size:9px}
+
+  .spec{display:block;width:100%;text-align:left;padding:7px 10px;
+    border-left:2px solid transparent;transition:.18s;margin-bottom:1px}
+  .spec .row{display:flex;gap:10px;align-items:baseline}
+  .spec .idx{font-size:9px;color:var(--dim);letter-spacing:.1em}
+  .spec .nm{font-size:13px;font-family:var(--disp);font-weight:400;letter-spacing:.02em}
+  .spec .ds{display:block;font-family:var(--disp);font-style:italic;font-size:11px;
+    color:var(--dim);margin-top:2px;opacity:.85}
+  .spec:hover{background:rgba(233,226,212,.04)}
+  .spec.on{border-left-color:var(--amber);background:var(--amber-dim)}
+  .spec.on .nm{color:var(--amber-hi)}
+  .spec.on .idx{color:var(--amber)}
+
+  .sl{margin-bottom:13px}
+  .sl .lr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+  .sl label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .sl .val{font-size:10px;color:var(--amber)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;
+    background:transparent;display:block}
+  input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--faint)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:5px;height:15px;
+    background:var(--amber);margin-top:-6.5px;border:none}
+  input[type=range]::-moz-range-track{height:2px;background:var(--faint)}
+  input[type=range]::-moz-range-progress{height:2px;background:var(--amber)}
+  input[type=range]::-moz-range-thumb{width:5px;height:15px;background:var(--amber);
+    border:none;border-radius:0}
+
+  .palcur{font-size:9px;letter-spacing:.18em;color:var(--dim);margin-bottom:8px;text-transform:uppercase}
+  .palcur b{color:var(--amber);font-weight:500}
+  #palettes{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px}
+  #palettes button{height:22px;display:flex;border:1px solid var(--faint);
+    padding:0;overflow:hidden;transition:.2s}
+  #palettes button i{flex:1}
+  #palettes button:hover{border-color:var(--dim)}
+  #palettes button.on{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+
+  .seg{display:flex;border:1px solid var(--faint);margin-bottom:14px}
+  .seg button{flex:1;padding:7px 0;font-size:9px;letter-spacing:.12em;color:var(--dim);
+    text-transform:uppercase;border-right:1px solid var(--faint);transition:.15s}
+  .seg button:last-child{border-right:none}
+  .seg button:hover{color:var(--ink)}
+  .seg button.on{background:var(--amber);color:#171208;font-weight:500}
+
+  .tg{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
+  .tg label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .sw{width:32px;height:17px;border:1px solid var(--faint);position:relative;
+    transition:border-color .2s}
+  .sw i{position:absolute;top:3px;left:3px;width:9px;height:9px;
+    background:var(--dim);transition:.2s cubic-bezier(.4,0,.2,1)}
+  .sw.on{border-color:var(--amber)}
+  .sw.on i{left:18px;background:var(--amber)}
+
+  .actions{padding:14px 20px 16px;border-top:1px solid var(--hair);
+    display:flex;flex-direction:column;gap:8px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:9px;
+    padding:11px 0;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+    transition:.18s;border:1px solid var(--faint)}
+  .btn svg{width:14px;height:14px;flex:none}
+  .btn.primary{background:var(--amber);color:#171208;border-color:var(--amber);font-weight:500}
+  .btn.primary:hover{background:var(--amber-hi);border-color:var(--amber-hi)}
+  .btn.ghost{color:var(--dim)}
+  .btn.ghost:hover{color:var(--amber);border-color:var(--amber)}
+  .actions .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .actions .grid .btn{letter-spacing:.12em;font-size:9px;padding:10px 0}
+  .btn.active{color:var(--amber);border-color:var(--amber);background:var(--amber-dim)}
+
+  #tabBtn{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:19;
+    writing-mode:vertical-rl;padding:16px 7px;font-size:9px;letter-spacing:.3em;
+    color:var(--dim);background:rgba(14,13,11,.84);border:1px solid var(--faint);
+    border-right:none;text-transform:uppercase;transition:.3s;
+    opacity:0;pointer-events:none}
+  body.folded #tabBtn{opacity:1;pointer-events:auto}
+  #tabBtn:hover{color:var(--amber)}
+
+  #hint{position:fixed;left:32px;bottom:26px;z-index:10;font-size:9px;
+    letter-spacing:.16em;color:var(--dim);user-select:none;transition:opacity .5s}
+  #hint kbd,#flyHint kbd{border:1px solid var(--faint);padding:2px 5px;
+    font-family:inherit;font-size:8px;color:var(--ink);margin:0 2px}
+  #hint .sep{margin:0 8px;color:var(--faint)}
+  #hint{max-width:max(300px, calc(100vw - 760px));line-height:2.3}
+  body.folded #hint{max-width:max(300px, calc(100vw - 460px))}
+
+  #flyHint{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);
+    z-index:10;font-size:9px;letter-spacing:.14em;color:var(--dim);
+    user-select:none;text-align:center;opacity:0;pointer-events:none;transition:opacity .4s}
+  #flyHint .sep{margin:0 8px;color:var(--faint)}
+  body.flying #flyHint{opacity:1}
+  body.flying #hint{opacity:0}
+
+  #stats{position:fixed;right:340px;bottom:26px;z-index:10;font-size:9px;
+    letter-spacing:.14em;color:var(--dim);text-align:right;user-select:none;
+    transition:opacity .5s}
+  body.folded #stats{right:32px}
+  #stats b{color:var(--amber);font-weight:500}
+
+  #eyeBtn{position:fixed;top:20px;right:20px;z-index:30;width:34px;height:34px;
+    display:flex;align-items:center;justify-content:center;color:var(--ink);
+    opacity:0;pointer-events:none;transition:.3s;border:1px solid transparent}
+  #eyeBtn:hover{opacity:1!important;border-color:var(--faint)}
+  body.cinema #eyeBtn{opacity:.3;pointer-events:auto}
+  body.cinema #panel,body.cinema #hd,body.cinema #hint,body.cinema #flyHint,
+  body.cinema #stats,body.cinema #tabBtn{opacity:0;pointer-events:none}
+
+  #toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,16px);
+    z-index:40;background:rgba(14,13,11,.92);border:1px solid var(--faint);
+    border-left:2px solid var(--amber);padding:10px 18px;font-size:10px;
+    letter-spacing:.14em;color:var(--ink);opacity:0;pointer-events:none;
+    transition:.35s cubic-bezier(.4,0,.2,1)}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  #fatal{position:fixed;inset:0;z-index:50;display:none;align-items:center;
+    justify-content:center;background:var(--bg);text-align:center;padding:32px}
+  #fatal p{font-family:var(--disp);font-style:italic;font-size:18px;
+    color:var(--dim);max-width:460px;line-height:1.7}
+
+  .dimmed{opacity:.32;pointer-events:none;transition:opacity .25s}
+  #cutWorld{transition:opacity .25s}
+
+  /* ---------- Formula editor ---------- */
+  #editor{position:fixed;top:16px;left:16px;bottom:16px;z-index:25;
+    width:min(600px, calc(100vw - 360px));
+    background:rgba(14,13,11,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border:1px solid var(--faint);display:flex;flex-direction:column;
+    transform:translateX(calc(-100% - 24px));opacity:0;pointer-events:none;
+    transition:transform .45s cubic-bezier(.4,0,.2,1),opacity .35s}
+  body.editing #editor{transform:none;opacity:1;pointer-events:auto}
+  body.folded #editor{width:min(600px, calc(100vw - 32px))}
+  body.editing #hd,body.editing #hint{opacity:0}
+  body.cinema #editor{opacity:0;pointer-events:none}
+  .ed-head{display:flex;align-items:center;gap:12px;padding:14px 16px 12px;
+    border-bottom:1px solid var(--hair)}
+  .ed-head h3{flex:1;font-family:var(--disp);font-style:italic;font-weight:300;
+    font-size:24px;line-height:1}
+  .ed-head select{font-family:var(--mono);font-size:10px;color:var(--ink);
+    background:#15130f;border:1px solid var(--faint);padding:6px 8px;max-width:190px}
+  .ed-head select:focus-visible,#edCode:focus-visible{outline:1px solid var(--amber)}
+  #edClose{width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+    color:var(--dim);border:1px solid transparent}
+  #edClose:hover{color:var(--amber);border-color:var(--faint)}
+  .ed-help{border-bottom:1px solid var(--hair);font-size:10px;line-height:1.7;color:var(--dim)}
+  .ed-help summary{cursor:pointer;padding:8px 16px;color:var(--dim);list-style:none}
+  .ed-help summary::-webkit-details-marker{display:none}
+  .ed-help summary::before{content:"+ ";color:var(--amber)}
+  .ed-help[open] summary::before{content:"- "}
+  .ed-help div{padding:0 16px 12px;max-height:30vh;overflow:auto}
+  .ed-help p{margin-bottom:6px}
+  .ed-help code{color:var(--amber-hi);font-family:var(--mono)}
+  .ed-body{flex:1;display:flex;min-height:0;background:rgba(0,0,0,.18)}
+  #edGutter{flex:none;width:46px;margin:0;padding:12px 10px 12px 0;overflow:hidden;
+    text-align:right;font-family:var(--mono);font-size:11px;line-height:17px;
+    color:rgba(233,226,212,.22);user-select:none;border-right:1px solid var(--hair)}
+  #edGutter b{font-weight:500;color:var(--err)}
+  #edCode{flex:1;min-width:0;resize:none;border:none;outline:none;background:transparent;
+    color:var(--ink);font-family:var(--mono);font-size:11px;line-height:17px;
+    padding:12px 12px 12px 12px;white-space:pre;overflow:auto;tab-size:2;
+    caret-color:var(--amber);scrollbar-width:thin;scrollbar-color:var(--faint) transparent}
+  #edCode::selection{background:rgba(217,160,91,.28)}
+  .ed-log{max-height:118px;min-height:34px;overflow:auto;border-top:1px solid var(--hair);
+    padding:9px 16px;font-size:10px;line-height:1.65;color:var(--dim)}
+  .ed-log .ok{color:var(--amber)}
+  .ed-log .warn{color:var(--amber-hi);opacity:.8;display:block}
+  .ed-log button.e{display:block;text-align:left;color:var(--err);width:100%;padding:1px 0}
+  .ed-log button.e:hover{color:#f39a86}
+  .ed-foot{display:flex;align-items:center;gap:8px;padding:12px 16px;
+    border-top:1px solid var(--hair);flex-wrap:wrap}
+  .ed-foot .btn{padding:9px 14px}
+  .ed-foot .note{font-size:9px;color:var(--dim);margin-right:auto}
+  .ed-foot .tg{margin:0 6px 0 0;gap:8px}
+
+  @media (max-width:760px){
+    #hd{top:16px;left:16px}
+    #hd h1{font-size:30px}
+    #panel{top:auto;left:12px;right:12px;bottom:12px;width:auto;max-height:46vh}
+    body.folded #panel{transform:translateY(calc(100% + 20px))}
+    #tabBtn{writing-mode:horizontal-tb;top:auto;bottom:0;right:50%;
+      transform:translate(50%,-120%);padding:6px 18px}
+    #hint,#stats,#flyHint{display:none}
+    #editor{top:12px;left:12px;right:12px;bottom:auto;height:50vh;width:auto}
+    body.folded #editor{width:auto}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="view" class="faded"></canvas>
+
+<header id="hd">
+  <h1>Fractalis<em>.</em></h1>
+  <p class="tagline">OBSERVATORY OF INFINITE OBJECTS — GLSL RAYMARCHING</p>
+  <p class="current"><b id="hdIdx">No. 01</b>&nbsp;&nbsp;<span id="hdName">MANDELBULB</span></p>
+</header>
+
+<aside id="panel">
+  <button id="foldBtn" title="Fold panel (P)" aria-label="Fold panel">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 5l7 7-7 7"/></svg>
+  </button>
+  <div class="scroll">
+    <section>
+      <h2><span>I</span>Specimens</h2>
+      <div id="specs"></div>
+    </section>
+    <section>
+      <h2><span>II</span>Geometry</h2>
+      <div id="params"></div>
+    </section>
+    <section>
+      <h2><span>III</span>Cut</h2>
+      <div id="cutToggles"></div>
+      <div class="seg" id="cutMode"></div>
+      <div id="cutSliders"></div>
+      <div id="cutWorld"></div>
+    </section>
+    <section>
+      <h2><span>IV</span>Color</h2>
+      <p class="palcur">Palette — <b id="palName">Ember</b></p>
+      <div id="palettes"></div>
+      <div id="colSliders"></div>
+    </section>
+    <section>
+      <h2><span>V</span>Light</h2>
+      <div id="lightSliders"></div>
+    </section>
+    <section>
+      <h2><span>VI</span>Engine</h2>
+      <div class="seg" id="quality"></div>
+      <div id="toggles"></div>
+    </section>
+  </div>
+  <div class="actions">
+    <button class="btn primary" id="capBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.5 7.5h4l1.7-2.5h5.6l1.7 2.5h4v11h-17z"/><circle cx="12" cy="12.7" r="3.4"/></svg>
+      Capture PNG
+    </button>
+    <div class="grid">
+    <button class="btn ghost" id="flyBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5z"/></svg>
+      Free cam (V)
+    </button>
+    <button class="btn ghost" id="edBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8.5 7L3.5 12l5 5M15.5 7l5 5-5 5M13.5 4.5l-3 15"/></svg>
+      Formula (F)
+    </button>
+    <button class="btn ghost" id="rndBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+      Random
+    </button>
+    <button class="btn ghost" id="cineBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12s3.5-5.5 8-5.5S20 12 20 12s-3.5 5.5-8 5.5S4 12 4 12z"/><circle cx="12" cy="12" r="2.6"/><line x1="5" y1="19" x2="19" y2="5"/></svg>
+      Cinema
+    </button>
+    </div>
+  </div>
+</aside>
+
+<button id="tabBtn">Panel</button>
+
+<div id="hint">
+  DRAG orbit<span class="sep">·</span>SCROLL zoom<span class="sep">·</span>
+  <kbd>V</kbd> free cam<span class="sep">·</span><kbd>H</kbd> interface<span class="sep">·</span><kbd>R</kbd> reframe<span class="sep">·</span><kbd>X</kbd> cut<span class="sep">·</span><kbd>F</kbd> formula
+</div>
+
+<div id="flyHint">
+  <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move
+  <span class="sep">·</span>MOUSE (hold) look
+  <span class="sep">·</span><kbd>SPACE</kbd>/<kbd>E</kbd> up <kbd>C</kbd> down
+  <span class="sep">·</span><kbd>SHIFT</kbd> boost
+  <span class="sep">·</span>SCROLL speed
+  <span class="sep">·</span><kbd>V</kbd> exit
+</div>
+
+<div id="stats">—</div>
+
+<button id="eyeBtn" title="Show interface (H)" aria-label="Show interface">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12s3.5-5.5 8-5.5S20 12 20 12s-3.5 5.5-8 5.5S4 12 4 12z"/><circle cx="12" cy="12" r="2.6"/></svg>
+</button>
+<div id="editor" role="dialog" aria-label="Formula editor">
+  <div class="ed-head">
+    <h3>Formula editor</h3>
+    <select id="edTpl" aria-label="Load a template"></select>
+    <button id="edClose" title="Close (Esc)" aria-label="Close editor">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <details class="ed-help">
+    <summary>How it works</summary>
+    <div>
+      <p>Write <code>float deFractal(vec3 p)</code>: it returns a distance estimate to the surface, and can set <code>g_trap</code> (0 to 1) to drive the palette. Compiling forks your code into the Workshop specimen.</p>
+      <p>Uniforms: <code>u_pA</code> to <code>u_pE</code>, <code>u_iter</code>, <code>u_time</code>. Helpers: <code>rot2(angle)</code> returns a mat2, <code>qmul(a, b)</code> multiplies quaternions.</p>
+      <p>Comment directives build the sliders: <code>// @param pA "Label" min max value [step]</code>, <code>// @iter min max value</code>, <code>// @bound radius</code> (bounding sphere, 0 disables it), <code>// @cam distance</code>.</p>
+      <p>Keep loop bounds constant and exit early: <code>for(int i=0;i&lt;32;i++){ if(i &gt;= it) break; }</code>. The cutting plane is applied on top of your formula.</p>
+      <p>Ctrl+Enter compiles, Ctrl+S saves in this browser, Tab indents, Esc closes.</p>
+    </div>
+  </details>
+  <div class="ed-body">
+    <pre id="edGutter" aria-hidden="true"></pre>
+    <textarea id="edCode" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" wrap="off" aria-label="GLSL source"></textarea>
+  </div>
+  <div class="ed-log" id="edLog" aria-live="polite"></div>
+  <div class="ed-foot">
+    <button class="btn primary" id="edRun">Compile and run</button>
+    <span class="note">Ctrl+Enter</span>
+    <div class="tg"><label for="edLive">Live</label><button class="sw" id="edLive" role="switch" aria-label="Live compile"><i></i></button></div>
+    <button class="btn ghost" id="edSave">Save</button>
+    <button class="btn ghost" id="edCopy">Copy</button>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="fatal"><p id="fatalMsg"></p></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =====================================================================
+   FRACTALIS v7
+   New in v7:
+   · Cutting plane: map() now returns max(de, plane). The plane either
+     faces the camera (always opens the side you look at) or is fixed in
+     world space, with offset, flip, sweep and a tint for the cut face.
+     Shortcut X.
+   · Four new specimens: Juliabulb, Classic Menger (true cube sponge with
+     box distance), Octahedral KIFS, Icosahedral KIFS.
+   · Formula editor (F): live GLSL editing of deFractal, compiled and
+     validated on the same WebGL context before the swap, errors mapped
+     back to editor lines, comment directives generate the sliders, any
+     specimen can be loaded as a template, work saved in localStorage.
+   · Shortcuts are ignored while typing in the editor.
+   =====================================================================
+   FRACTALIS v6.1
+   CRITICAL FIX (v6.1): v6 would not run at all — a GLSL comment inside
+   the FRAG_TAIL template literal contained backticks, which closed the
+   string early and produced "SyntaxError: Unexpected identifier 't'".
+   The whole script never parsed: black screen, no fractals. All template
+   literals have been swept again: no stray backtick, no stray ${.
+   Kept from v6:
+   · All GLSL loop bounds exceed their slider maxima (mandatory after
+     raising iteration caps: bulb 20→32, julia 14→24, box 16→24,
+     menger 12→20, sierpinski 14→24, apollonius 10→16, hybrid 16→24,
+     universe 14→24).
+   · march() hit test uses the -1 sentinel (a hit exactly at t=0 no
+     longer falls through to background).
+   · Value readouts derive decimals from step; randomizer no longer
+     randomizes the iteration count.
+   · Shortcuts ignored under Ctrl/Cmd/Alt; Space/Arrows no longer
+     hijacked while a control has focus.
+   Carried over from v5:
+   · Mandelbox: bounding sphere tested before the walk + early escape
+     once the orbit diverges (3-10× faster, no step budget wasted).
+   · Fog is relative to the framing distance — the front of the object
+     always stays crisp.
+===================================================================== */
+
+function fatal(msg){
+  const f = document.getElementById('fatal');
+  document.getElementById('fatalMsg').textContent = msg;
+  f.style.display = 'flex';
+}
+
+if(typeof THREE === 'undefined'){
+  fatal('Three.js could not be loaded (network or content blocker). ' +
+        'Check your connection, or open the file directly in your browser.');
+  throw new Error('THREE unavailable');
+}
+
+/* ---------- Specimen catalogue ---------- */
+const FRACTALS = [
+  { id:'bulb', name:'Mandelbulb', desc:'the mathematical orchid', evolve:'pA',
+    cam:{t:0.7,p:1.15,d:3.4},
+    params:[
+      {k:'pA', label:'Power',       min:2,  max:14, step:0.01, v:8,  rr:[3.5,11]},
+      {k:'pB', label:'Flux',        min:0,  max:1,  step:0.01, v:0,  rr:[0,0.6]},
+      {k:'iter',label:'Iterations', min:4,  max:32, step:1,    v:12} ]},
+  { id:'julia', name:'Quaternion Julia', desc:'an infinity pinned by c', evolve:'pA',
+    cam:{t:0.45,p:1.25,d:3.2},
+    params:[
+      {k:'pA', label:'C — real part', min:-1, max:1, step:0.005, v:-0.2, rr:[-0.75,0.75]},
+      {k:'pB', label:'C — i axis',    min:-1, max:1, step:0.005, v:0.6,  rr:[-0.75,0.75]},
+      {k:'pC', label:'C — j axis',    min:-1, max:1, step:0.005, v:0.2,  rr:[-0.75,0.75]},
+      {k:'pD', label:'C — k axis',    min:-1, max:1, step:0.005, v:0.2,  rr:[-0.75,0.75]},
+      {k:'iter',label:'Iterations',   min:4,  max:24, step:1,    v:10} ]},
+  { id:'box', name:'Mandelbox', desc:'the folding factory', evolve:'pA',
+    cam:{t:0.85,p:1.2,d:6.2},
+    params:[
+      {k:'pA', label:'Scale',       min:1.5, max:3,   step:0.005, v:2,   rr:[1.7,2.7]},
+      {k:'pB', label:'Fold',        min:0,   max:1,   step:0.01,  v:0.7, rr:[0.2,1]},
+      {k:'pC', label:'Twist xy',    min:-0.5,max:0.5, step:0.005, v:0,   rr:[-0.3,0.3]},
+      {k:'pD', label:'Twist yz',    min:-0.5,max:0.5, step:0.005, v:0,   rr:[-0.3,0.3]},
+      {k:'iter',label:'Iterations', min:6,   max:24,  step:1,     v:12} ]},
+  { id:'menger', name:'Menger Sponge', desc:'the cube with infinite windows', evolve:'pB',
+    cam:{t:0.65,p:1.15,d:4.1},
+    params:[
+      {k:'pA', label:'Scale',       min:2.2,  max:3.4,  step:0.005, v:3,    rr:[2.6,3.2]},
+      {k:'pB', label:'Roll',        min:-0.35,max:0.35, step:0.002, v:0.04, rr:[-0.25,0.25]},
+      {k:'pC', label:'Pitch',       min:-0.35,max:0.35, step:0.002, v:0,    rr:[-0.25,0.25]},
+      {k:'pD', label:'Yaw',         min:-0.35,max:0.35, step:0.002, v:0,    rr:[-0.25,0.25]},
+      {k:'iter',label:'Iterations', min:3,    max:20,   step:1,     v:9} ]},
+  { id:'sierp', name:'Sierpinski Tetrahedron', desc:'the triangle raised to volume', evolve:'pB',
+    cam:{t:0.5,p:1.2,d:4.1},
+    params:[
+      {k:'pA', label:'Scale',       min:1.55, max:2.6, step:0.005, v:2,    rr:[1.7,2.35]},
+      {k:'pB', label:'Rotation alpha', min:-0.4, max:0.4, step:0.002, v:0.05, rr:[-0.3,0.3]},
+      {k:'pC', label:'Rotation beta',  min:-0.4, max:0.4, step:0.002, v:0,    rr:[-0.3,0.3]},
+      {k:'pD', label:'Rotation gamma', min:-0.4, max:0.4, step:0.002, v:0,    rr:[-0.3,0.3]},
+      {k:'iter',label:'Iterations', min:4,    max:24,  step:1,     v:12} ]},
+  { id:'apollo', name:'Apollonian Spheres', desc:'the tangent packing', evolve:'pB',
+    cam:{t:0.3,p:1.35,d:2.4},
+    params:[
+      {k:'pA', label:'Density',     min:0.9, max:1.4, step:0.002, v:1.16, rr:[1.0,1.3]},
+      {k:'pB', label:'Tilt',        min:-0.5,max:0.5, step:0.002, v:0,    rr:[-0.3,0.3]},
+      {k:'pC', label:'Shear',       min:-0.5,max:0.5, step:0.002, v:0,    rr:[-0.3,0.3]},
+      {k:'iter',label:'Iterations', min:4,   max:16,  step:1,     v:8} ]},
+  { id:'hybrid', name:'Box x Bulb Hybrid', desc:'a cross of two infinities', evolve:'pA',
+    cam:{t:0.75,p:1.2,d:4.4},
+    params:[
+      {k:'pA', label:'Power',       min:2,   max:6,   step:0.01,  v:3,    rr:[2,5]},
+      {k:'pB', label:'Scale',       min:0.8, max:2,   step:0.005, v:1.35, rr:[1.0,1.9]},
+      {k:'pC', label:'Cubic phase', min:0,   max:1,   step:0.01,  v:0.45, rr:[0.2,0.8]},
+      {k:'iter',label:'Iterations', min:6,   max:24,  step:1,     v:12} ]},
+  { id:'univ', name:'Sierpinski Universe', desc:'the tetrahedral kaleidoscope', evolve:'pE',
+    cam:{t:0.55,p:1.25,d:3.2},
+    params:[
+      {k:'pB', label:'x axis',      min:0.4, max:1.6, step:0.005, v:1,    rr:[0.6,1.4]},
+      {k:'pC', label:'y axis',      min:0.4, max:1.6, step:0.005, v:1,    rr:[0.6,1.4]},
+      {k:'pD', label:'z axis',      min:0.4, max:1.6, step:0.005, v:1,    rr:[0.6,1.4]},
+      {k:'pE', label:'Spiral',      min:-0.5,max:0.5, step:0.002, v:0.12, rr:[-0.25,0.25]},
+      {k:'iter',label:'Iterations', min:5,   max:24,  step:1,     v:11} ]},
+  { id:'jbulb', name:'Juliabulb', desc:'the orchid held by a constant', evolve:'pA',
+    cam:{t:0.7,p:1.15,d:2.8},
+    params:[
+      {k:'pA', label:'C x',         min:-1, max:1,  step:0.005, v:-0.2, rr:[-0.8,0.8]},
+      {k:'pB', label:'C y',         min:-1, max:1,  step:0.005, v:0.8,  rr:[-0.8,0.8]},
+      {k:'pC', label:'C z',         min:-1, max:1,  step:0.005, v:0,    rr:[-0.6,0.6]},
+      {k:'pD', label:'Power',       min:2,  max:12, step:0.01,  v:8,    rr:[3,10]},
+      {k:'iter',label:'Iterations', min:3,  max:32, step:1,     v:10} ]},
+  { id:'mcube', name:'Classic Menger', desc:'the true sponge, square holes and all', evolve:'pB',
+    cam:{t:0.65,p:1.1,d:3.6},
+    params:[
+      {k:'pA', label:'Scale',       min:2.4,  max:3.4,  step:0.005, v:3,   rr:[2.7,3.2]},
+      {k:'pB', label:'Hole depth',  min:0.3,  max:1.3,  step:0.005, v:1,   rr:[0.6,1.2]},
+      {k:'pC', label:'Twist',       min:-0.08,max:0.08, step:0.001, v:0,   rr:[-0.03,0.03]},
+      {k:'iter',label:'Iterations', min:2,    max:12,   step:1,     v:6} ]},
+  { id:'octa', name:'Octahedral KIFS', desc:'a kaleidoscope folded eight ways', evolve:'pB',
+    cam:{t:0.6,p:1.15,d:3.0},
+    params:[
+      {k:'pA', label:'Scale',       min:1.8, max:3.2, step:0.005, v:2.5, rr:[2.1,3.0]},
+      {k:'pB', label:'Offset y',    min:0,   max:1,   step:0.005, v:0.5, rr:[0.2,0.9]},
+      {k:'pC', label:'Offset z',    min:0,   max:1,   step:0.005, v:0.2, rr:[0,0.6]},
+      {k:'pD', label:'Twist',       min:-0.3,max:0.3, step:0.002, v:0,   rr:[-0.15,0.15]},
+      {k:'iter',label:'Iterations', min:3,   max:24,  step:1,     v:10} ]},
+  { id:'icosa', name:'Icosahedral KIFS', desc:'twenty mirrors, one crystal', evolve:'pB',
+    cam:{t:0.6,p:1.15,d:2.8},
+    params:[
+      {k:'pA', label:'Scale',       min:1.6, max:3,   step:0.005, v:2,   rr:[1.8,2.6]},
+      {k:'pB', label:'Vertex to face', min:0, max:1,  step:0.005, v:0,   rr:[0,0.7]},
+      {k:'pC', label:'Twist',       min:-0.2,max:0.2, step:0.001, v:0,   rr:[-0.08,0.08]},
+      {k:'iter',label:'Iterations', min:3,   max:24,  step:1,     v:10} ]},
+  { id:'custom', name:'Workshop', desc:'your own formula, from the editor', evolve:null,
+    cam:{t:0.7,p:1.15,d:3.4}, params:[], custom:true, bound:3 },
+];
+const CUSTOM = FRACTALS.length - 1;
+
+const PALETTES = [
+  { name:'Ember',   a:[0.50,0.38,0.28], b:[0.46,0.34,0.26], d:[0.02,0.12,0.24] },
+  { name:'Glacier', a:[0.48,0.52,0.56], b:[0.30,0.30,0.32], d:[0.58,0.66,0.74] },
+  { name:'Ivory',   a:[0.56,0.53,0.49], b:[0.30,0.28,0.26], d:[0.06,0.05,0.04] },
+  { name:'Forest',  a:[0.34,0.42,0.33], b:[0.30,0.36,0.26], d:[0.28,0.42,0.60] },
+  { name:'Nebula',  a:[0.54,0.36,0.38], b:[0.40,0.28,0.32], d:[0.90,0.06,0.30] },
+];
+
+const QUALITY = [
+  { name:'Draft',    steps:110, dpr:1.0 },
+  { name:'Balanced', steps:190, dpr:1.5 },
+  { name:'Fine',     steps:300, dpr:2.0 },
+];
+
+/* ---------- Shaders: common head + ONE formula per specimen ---------- */
+const VERT = `
+void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }
+`;
+
+const FRAG_HEAD = `
+uniform vec2  u_res;
+uniform float u_time;
+uniform vec3  u_camPos;
+uniform vec3  u_camTarget;
+uniform float u_fov;
+uniform float u_pA, u_pB, u_pC, u_pD, u_pE, u_iter;
+uniform vec3  u_palA, u_palB, u_palC, u_palD;
+uniform float u_cyc, u_trap, u_phase;
+uniform vec3  u_light;
+uniform float u_shadow, u_ao, u_fog, u_steps, u_grain;
+uniform float u_bound;   /* bounding-sphere radius; 0 = disabled */
+uniform float u_cut, u_cutO, u_cutTint;   /* cutting plane: on, offset, face tint */
+uniform vec3  u_cutN;                     /* plane normal (kept side: dot(p,N) < offset) */
+
+float g_trap = 1e9;
+
+mat2 rot2(float a){ float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
+vec4 qmul(vec4 a, vec4 b){
+  return vec4(a.x*b.x - dot(a.yzw,b.yzw),
+              a.x*b.yzw + b.x*a.yzw + cross(a.yzw,b.yzw));
+}
+`;
+
+const FRAG_TAIL = `
+/* Cutting plane: intersection of the fractal with a half-space. The
+   max() keeps a valid distance bound, so marching, normals, shadows and
+   occlusion all see the opened object. */
+float map(vec3 p){
+  float d = deFractal(p);
+  if(u_cut > 0.5) d = max(d, dot(p, u_cutN) - u_cutO);
+  return d;
+}
+
+vec3 calcN(vec3 p, float e){
+  vec2 k = vec2(1.0,-1.0);
+  return normalize( k.xyy*map(p+k.xyy*e) + k.yyx*map(p+k.yyx*e)
+                  + k.yxy*map(p+k.yxy*e) + k.xxx*map(p+k.xxx*e) );
+}
+
+float softShadow(vec3 ro, vec3 ld){
+  float res = 1.0, t = 0.02;
+  for(int i=0;i<32;i++){
+    float d = map(ro + ld*t);
+    res = min(res, 10.0*d/t);
+    t += clamp(d, 0.008, 0.20);
+    if(res < 0.004 || t > 10.0) break;
+  }
+  return clamp(res, 0.0, 1.0);
+}
+
+float calcAO(vec3 p, vec3 n){
+  float occ = 0.0, sca = 1.0;
+  for(int i=0;i<5;i++){
+    float h = 0.01 + 0.12*float(i)/4.0;
+    occ += (h - map(p + n*h))*sca;
+    sca *= 0.7;
+  }
+  return clamp(1.0 - 2.0*occ, 0.0, 1.0);
+}
+
+/* The walk receives its bounds [t0, t1]: it only starts at the entry of
+   the bounding sphere and stops at its exit. Misses return -1.0. */
+float march(vec3 ro, vec3 rd, float t0, float t1){
+  float t = t0;
+  int steps = int(u_steps + 0.5);
+  for(int i=0;i<400;i++){
+    if(i >= steps) break;
+    vec3 p = ro + rd*t;
+    float d = map(p);
+    if(d < 0.0004 + 0.0008*t) return t;
+    t += max(d*0.9, 0.0002);
+    if(t > t1) break;
+  }
+  return -1.0;
+}
+
+vec3 palette(float t){
+  return u_palA + u_palB*cos(6.28318*(u_palC*t + u_palD));
+}
+
+vec3 aces(vec3 x){
+  return clamp((x*(2.51*x + 0.03))/(x*(2.43*x + 0.59) + 0.14), 0.0, 1.0);
+}
+
+float starfield(vec3 rd){
+  vec3 q = rd*140.0;
+  vec3 id = floor(q);
+  float h = fract(sin(dot(id, vec3(12.9898,78.233,37.719)))*43758.5453);
+  float tw = 0.6 + 0.4*sin(u_time*1.5 + h*60.0);
+  return step(0.9982, h)*tw;
+}
+
+void main(){
+  vec2 uv = (2.0*gl_FragCoord.xy - u_res)/u_res.y;
+  vec3 ro = u_camPos;
+  vec3 ww = normalize(u_camTarget - ro);
+  vec3 uu = normalize(cross(ww, vec3(0.0,1.0,0.0)));
+  vec3 vv = cross(uu, ww);
+  vec3 rd = normalize(uv.x*uu + uv.y*vv + u_fov*ww);
+
+  /* Ray/bounding-sphere intersection */
+  float t0 = 0.0, t1 = 24.0;
+  bool inBound = true;
+  if(u_bound > 0.0){
+    float b = dot(ro, rd);
+    float cc = dot(ro, ro) - u_bound*u_bound;
+    float disc = b*b - cc;
+    if(disc <= 0.0){
+      inBound = false;
+    } else {
+      float sq = sqrt(disc);
+      t0 = max(-b - sq, 0.0);
+      t1 = -b + sq;
+    }
+  }
+
+  float t = inBound ? march(ro, rd, t0, t1) : -1.0;
+  float trap = clamp(g_trap, 0.0, 1.0);
+
+  vec3 bg = vec3(0.012, 0.011, 0.010)
+          + vec3(0.030, 0.024, 0.018)*exp(-dot(uv,uv)*2.5);
+  bg += vec3(0.75, 0.70, 0.62)*starfield(rd)*smoothstep(0.15, 0.8, length(uv));
+
+  vec3 col;
+  /* FIX v6.1: previous test was t greater than 0.0, so a hit exactly at
+     t=0 fell through to background. Sentinel is now -1.0. */
+  if(t > -0.5){
+    vec3 p = ro + rd*t;
+    float e = max(0.0005, 0.001*t);
+    vec3 n = calcN(p, e);
+
+    float cyc = u_phase + u_time*u_cyc*0.05;
+    vec3 base = palette(fract(cyc + trap*u_trap));
+
+    /* Cut face: flat, aligned with the plane. It gets a shifted palette
+       so the revealed section reads apart from the outer skin. */
+    float onCut = 0.0;
+    if(u_cut > 0.5){
+      float pd = abs(dot(p, u_cutN) - u_cutO);
+      onCut = (1.0 - smoothstep(e*1.5, e*6.0, pd))*smoothstep(0.90, 0.99, dot(n, u_cutN));
+      vec3 inner = palette(fract(cyc + 0.5 + trap*u_trap*1.7));
+      base = mix(base, inner, onCut*u_cutTint);
+    }
+
+    vec3 ld = normalize(u_light);
+    float dif = clamp(dot(n, ld), 0.0, 1.0);
+    float sh = 1.0;
+    if(u_shadow > 0.001 && dif > 0.01) sh = softShadow(p + n*0.002, ld);
+    sh = mix(1.0, sh, u_shadow);
+    float ao = mix(1.0, calcAO(p, n), u_ao);
+    float sky = clamp(0.5 + 0.5*n.y, 0.0, 1.0);
+    float bou = clamp(0.5 - 0.5*n.y, 0.0, 1.0);
+    float rim = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+
+    vec3 lin = vec3(0.0);
+    lin += 1.35*dif*sh*vec3(1.05, 0.95, 0.82);
+    lin += 0.35*sky*vec3(0.45, 0.55, 0.70);
+    lin += 0.30*bou*vec3(0.60, 0.45, 0.30);
+    lin += 0.25*rim*vec3(0.90, 0.80, 0.70);
+    lin *= ao;
+
+    float spe = pow(clamp(dot(reflect(rd,n), ld), 0.0, 1.0), 40.0)*dif*sh;
+    col = base*lin + spe*vec3(1.0, 0.95, 0.85)*0.9*(1.0 - 0.6*onCut);
+    col += base*0.06*onCut*u_cutTint;
+
+    /* RELATIVE fog: measured beyond 60 percent of the framing distance.
+       The front of the object is always crisp; depth keeps its veil. */
+    float t0c = length(u_camTarget - ro);
+    float fd = max(t - t0c*0.6, 0.0);
+    float fg = clamp(1.0 - exp(-u_fog*0.13*fd), 0.0, 1.0);
+    col = mix(col, bg*1.4, fg);
+  } else {
+    col = bg;
+  }
+
+  col = aces(col);
+  col = pow(col, vec3(0.4545));
+  float gr = fract(sin(dot(gl_FragCoord.xy + u_time*61.0, vec2(12.9898,78.233)))*43758.5453);
+  col += (gr - 0.5)*u_grain;
+
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+/* Loop bounds are set slightly ABOVE the slider maxima so every
+   iteration setting is truly reachable (see v6 changelog). */
+const DE_CHUNKS = [
+/* 0 · Mandelbulb (loop 34, slider max 32) */`
+float deFractal(vec3 p){
+  if(u_pB > 0.001)
+    p += u_pB*0.15*vec3(sin(p.y*3.1+u_time*0.6), sin(p.z*3.3+u_time*0.5), sin(p.x*3.7+u_time*0.4));
+  vec3 z = p;
+  float dr = 1.0, r = length(z), tr = 1e9;
+  float pw = u_pA;
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<34;i++){
+    if(i >= it) break;
+    r = length(z);
+    if(r > 2.5) break;
+    float tz = acos(clamp(z.z/max(r,1e-6),-1.0,1.0));
+    float pz = atan(z.y, z.x + 1e-9);
+    dr = pow(max(r,1e-6), pw-1.0)*pw*dr + 1.0;
+    float zr = pow(max(r,1e-6), pw);
+    tz *= pw; pz *= pw;
+    z = zr*vec3(sin(tz)*cos(pz), sin(tz)*sin(pz), cos(tz)) + p;
+    tr = min(tr, r);
+  }
+  g_trap = tr;
+  return 0.5*log(max(r,1e-6))*r/max(dr,1e-9);
+}`,
+/* 1 · Quaternion Julia (canonical escape DE) — loop 26, slider max 24 */`
+float deFractal(vec3 p){
+  vec4 z = vec4(p, 0.0);
+  vec4 c = vec4(u_pA, u_pB, u_pC, u_pD);
+  float mz2 = max(dot(z,z), 1e-12);
+  float md2 = mz2;
+  float tr = 1e9;
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<26;i++){
+    if(i >= it) break;
+    md2 *= 4.0 * mz2;
+    z = qmul(z,z) + c;
+    mz2 = max(dot(z,z), 1e-12);
+    if(mz2 > 4.0) break;
+    tr = min(tr, mz2);
+  }
+  g_trap = tr;
+  return 0.25 * sqrt(mz2 / max(md2, 1e-20)) * log(max(mz2, 1.0001));
+}`,
+/* 2 · Mandelbox — early escape — loop 26, slider max 24 */`
+float deFractal(vec3 pos){
+  vec3 z = pos;
+  float dr = 1.0, tr = 1e9;
+  float sc = u_pA;
+  float mr = mix(0.05, 0.45, u_pB*u_pB);
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<26;i++){
+    if(i >= it) break;
+    z = clamp(z,-1.0,1.0)*2.0 - z;
+    float r2 = dot(z,z);
+    if(r2 < mr){ float f = 1.0/mr; z *= f; dr *= f; }
+    else if(r2 < 1.0){ float f = 1.0/r2; z *= f; dr *= f; }
+    tr = min(tr, r2);
+    if(abs(u_pC) > 0.001) z.xy = rot2(u_pC*3.14159)*z.xy;
+    if(abs(u_pD) > 0.001) z.yz = rot2(u_pD*3.14159)*z.yz;
+    z = z*sc + pos;
+    dr = dr*abs(sc) + 1.0;
+    /* Beyond |z| near 45 the orbit doubles every step: the |z|/dr ratio
+       has already converged to within 2 percent. No point continuing. */
+    if(dot(z,z) > 2000.0) break;
+  }
+  g_trap = tr;
+  return length(z)/max(abs(dr),1e-9);
+}`,
+/* 3 · Menger Sponge — loop 22, slider max 20 */`
+float deFractal(vec3 z){
+  float tr = 1e9, s = 1.0;
+  float sc = u_pA;
+  float ax = u_pB*3.14159, ay = u_pC*3.14159, az = u_pD*3.14159;
+  vec3 off = vec3(1.0, 1.0, 0.0);
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<22;i++){
+    if(i >= it) break;
+    z = abs(z);
+    if(z.x < z.y) z.xy = z.yx;
+    if(z.x < z.z) z.xz = z.zx;
+    if(z.y < z.z) z.yz = z.zy;
+    z.xy = rot2(az)*z.xy;
+    z.yz = rot2(ax)*z.yz;
+    z.xz = rot2(ay)*z.xz;
+    z = z*sc - off*(sc-1.0);
+    s *= sc;
+    tr = min(tr, length(z)/s);
+  }
+  g_trap = tr;
+  return (length(z)-2.0)/s*0.9;
+}`,
+/* 4 · Sierpinski Tetrahedron — loop 26, slider max 24 */`
+float deFractal(vec3 z){
+  float tr = 1e9, s = 1.0;
+  float sc = u_pA;
+  float ax = u_pB*3.14159, ay = u_pC*3.14159, az = u_pD*3.14159;
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<26;i++){
+    if(i >= it) break;
+    if(z.x+z.y < 0.0) z.xy = -z.yx;
+    if(z.x+z.z < 0.0) z.xz = -z.zx;
+    if(z.y+z.z < 0.0) z.yz = -z.zy;
+    z.yz = rot2(ax)*z.yz;
+    z.xz = rot2(ay)*z.xz;
+    z.xy = rot2(az)*z.xy;
+    z = z*sc - vec3(sc-1.0);
+    s *= sc;
+    tr = min(tr, length(z)/s);
+  }
+  g_trap = tr;
+  return (length(z)-2.0)/s*0.9;
+}`,
+/* 5 · Apollonian Spheres — loop 18, slider max 16 */`
+float deFractal(vec3 p){
+  float tr = 1e9, sc = 1.0;
+  float k0 = u_pA;
+  if(abs(u_pB) > 0.001) p.yz = rot2(u_pB*3.14159)*p.yz;
+  if(abs(u_pC) > 0.001) p.xz = rot2(u_pC*3.14159)*p.xz;
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<18;i++){
+    if(i >= it) break;
+    p = -1.0 + 2.0*fract(0.5*p + 0.5);
+    float r2 = dot(p,p);
+    float k = k0/max(r2, 0.08);
+    p *= k; sc *= k;
+    tr = min(tr, r2);
+  }
+  g_trap = tr;
+  return 0.25*abs(p.y)/max(sc,1e-9);
+}`,
+/* 6 · Box x Bulb Hybrid — loop 26, slider max 24 */`
+float deFractal(vec3 pos){
+  vec3 z = pos;
+  float dr = 1.0, tr = 1e9;
+  float pw = u_pA, sc = u_pB;
+  int nb = int(mix(2.0, 6.0, u_pC) + 0.5);
+  float r = length(z);
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<26;i++){
+    if(i >= it) break;
+    z = clamp(z,-1.0,1.0)*2.0 - z;
+    float r2 = dot(z,z);
+    if(r2 < 0.25){ z *= 4.0; dr *= 4.0; }
+    else if(r2 < 1.0){ float f = 1.0/r2; z *= f; dr *= f; }
+    tr = min(tr, r2);
+    z = z*sc + pos;
+    dr = dr*abs(sc) + 1.0;
+    if(dot(z,z) > 2000.0) break;
+    if(i >= nb-1){
+      r = max(length(z), 1e-6);
+      if(r < 2.5){
+        float tz = acos(clamp(z.z/r,-1.0,1.0));
+        float pz = atan(z.y, z.x + 1e-9);
+        dr = pow(r, pw-1.0)*pw*dr + 1.0;
+        float zr = pow(r, pw);
+        tz *= pw; pz *= pw;
+        z = zr*vec3(sin(tz)*cos(pz), sin(tz)*sin(pz), cos(tz)) + pos;
+      }
+    }
+  }
+  r = max(length(z), 1e-6);
+  g_trap = tr;
+  return 0.5*log(r)*r/max(dr,1e-9)*0.8;
+}`,
+/* 7 · Sierpinski Universe — loop 26, slider max 24 */`
+float deFractal(vec3 z){
+  float tr = 1e9, s = 1.0;
+  vec3 off = vec3(u_pB, u_pC, u_pD);
+  float az = u_pE*3.14159;
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<26;i++){
+    if(i >= it) break;
+    z = abs(z);
+    if(z.x < z.y) z.xy = z.yx;
+    if(z.x < z.z) z.xz = z.zx;
+    if(z.y < z.z) z.yz = z.zy;
+    z = 2.0*z - off;
+    if(z.z < -0.5*off.z) z.z += off.z;
+    z.xy = rot2(az)*z.xy;
+    s *= 2.0;
+    tr = min(tr, length(z)/s);
+  }
+  g_trap = tr;
+  return (length(z)-2.0)/s;
+}`,
+/* 8 · Juliabulb — loop 34, slider max 32 */`
+float deFractal(vec3 p){
+  vec3 c = vec3(u_pA, u_pB, u_pC);
+  vec3 z = p;
+  float dr = 1.0, r = length(z), tr = 1e9;
+  float pw = u_pD;
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<34;i++){
+    if(i >= it) break;
+    r = length(z);
+    if(r > 2.0) break;
+    float rr = max(r, 1e-6);
+    float tz = acos(clamp(z.z/rr,-1.0,1.0));
+    float pz = atan(z.y, z.x + 1e-9);
+    dr = pow(rr, pw-1.0)*pw*dr;
+    float zr = pow(rr, pw);
+    tz *= pw; pz *= pw;
+    z = zr*vec3(sin(tz)*cos(pz), sin(tz)*sin(pz), cos(tz)) + c;
+    tr = min(tr, r);
+  }
+  r = max(length(z), 1e-6);
+  g_trap = tr;
+  return 0.5*log(r)*r/max(dr,1e-9);
+}`,
+/* 9 · Classic Menger (box distance) — loop 14, slider max 12 */`
+float deFractal(vec3 z){
+  float tr = 1e9, s = 1.0;
+  float sc = u_pA, hole = u_pB;
+  float ay = u_pC*3.14159;
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<14;i++){
+    if(i >= it) break;
+    z = abs(z);
+    if(z.x < z.y) z.xy = z.yx;
+    if(z.x < z.z) z.xz = z.zx;
+    if(z.y < z.z) z.yz = z.zy;
+    if(abs(ay) > 0.0001) z.xz = rot2(ay)*z.xz;
+    z.xy = sc*z.xy - (sc-1.0);
+    z.z  = sc*z.z;
+    if(z.z > 0.5*(sc-1.0)*hole) z.z -= (sc-1.0)*hole;
+    s *= sc;
+    tr = min(tr, length(z)/s);
+  }
+  g_trap = tr;
+  vec3 q = abs(z) - 1.0;
+  float bx = length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+  return bx/s*(abs(ay) > 0.0001 ? 0.8 : 1.0);
+}`,
+/* 10 · Octahedral KIFS — loop 26, slider max 24 */`
+float deFractal(vec3 z){
+  float tr = 1e9, s = 1.0;
+  float sc = u_pA;
+  vec3 off = vec3(1.0, u_pB, u_pC);
+  float az = u_pD*3.14159;
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<26;i++){
+    if(i >= it) break;
+    z = abs(z);
+    if(z.x < z.y) z.xy = z.yx;
+    if(z.x < z.z) z.xz = z.zx;
+    if(z.y < z.z) z.yz = z.zy;
+    if(abs(az) > 0.0001) z.xy = rot2(az)*z.xy;
+    z = z*sc - off*(sc-1.0);
+    s *= sc;
+    tr = min(tr, length(z)/s);
+  }
+  g_trap = tr;
+  return (length(z) - 1.5)/s;
+}`,
+/* 11 · Icosahedral KIFS — loop 26, slider max 24 */`
+float deFractal(vec3 z){
+  const float PHI = 1.6180339887;
+  vec3 n1 = normalize(vec3(-PHI, PHI-1.0, 1.0));
+  vec3 n2 = normalize(vec3(1.0, -PHI, PHI+1.0));
+  vec3 off = mix(normalize(vec3(PHI, 1.0, 0.0)), normalize(vec3(1.0)), u_pB);
+  float tr = 1e9, s = 1.0;
+  float sc = u_pA;
+  float ax = u_pC*3.14159;
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<26;i++){
+    if(i >= it) break;
+    if(abs(ax) > 0.0001) z.xz = rot2(ax)*z.xz;
+    for(int j=0;j<2;j++){
+      z = abs(z);
+      z -= 2.0*max(dot(z, n1), 0.0)*n1;
+      z -= 2.0*max(dot(z, n2), 0.0)*n2;
+    }
+    z = abs(z);
+    z = z*sc - off*(sc-1.0);
+    s *= sc;
+    tr = min(tr, length(z)/s);
+  }
+  g_trap = tr;
+  return (length(z) - 1.2)/s;
+}`,
+/* 12 · Workshop: replaced by the formula editor at boot */`
+float deFractal(vec3 p){ g_trap = 0.5; return length(p) - 1.0; }`,
+];
+
+const fragCache = [];
+function fragFor(i){
+  if(!fragCache[i]) fragCache[i] = FRAG_HEAD + DE_CHUNKS[i] + FRAG_TAIL;
+  return fragCache[i];
+}
+
+/* ---------- Three.js setup ---------- */
+const canvas = document.getElementById('view');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias:false, preserveDrawingBuffer:true });
+} catch(e) {
+  fatal('WebGL is not available in this browser — the observatory cannot run without GPU acceleration.');
+  throw e;
+}
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+
+const U = {
+  u_res:{value:new THREE.Vector2()},
+  u_time:{value:0},
+  u_camPos:{value:new THREE.Vector3(0,0,4)},
+  u_camTarget:{value:new THREE.Vector3(0,0,0)},
+  u_fov:{value:1.6},
+  u_pA:{value:0}, u_pB:{value:0}, u_pC:{value:0}, u_pD:{value:0}, u_pE:{value:0},
+  u_iter:{value:12},
+  u_palA:{value:new THREE.Vector3()}, u_palB:{value:new THREE.Vector3()},
+  u_palC:{value:new THREE.Vector3(1,1,1)}, u_palD:{value:new THREE.Vector3()},
+  u_cyc:{value:0.6}, u_trap:{value:1.0}, u_phase:{value:0.0},
+  u_light:{value:new THREE.Vector3(0.6,0.5,0.4)},
+  u_shadow:{value:0.7}, u_ao:{value:0.9}, u_fog:{value:1.0},
+  u_steps:{value:190}, u_grain:{value:0.035},
+  u_bound:{value:0.0},
+  u_cut:{value:0}, u_cutO:{value:0}, u_cutTint:{value:0.6},
+  u_cutN:{value:new THREE.Vector3(0,0,1)},
+};
+
+const mat = new THREE.ShaderMaterial({
+  uniforms:U, vertexShader:VERT, fragmentShader:fragFor(0), depthTest:false
+});
+scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), mat));
+
+/* ---------- State ---------- */
+let specIdx = 0, qualityIdx = 1;
+let autoRot = true, evolve = false;
+let glLost = false;
+const F = () => FRACTALS[specIdx];
+const toggleSyncs = [];
+
+let th = 0, ph = 1.2, di = 4;
+let thT = 0, phT = 1.2, diT = 4;
+
+let flyMode = false;
+const flyPos = new THREE.Vector3(0,0,4);
+const flyVel = new THREE.Vector3();
+let flyYaw = 0, flyPitch = 0, flySpeed = 1.2;
+const keys = new Set();
+
+/* Cutting plane. mode 0: faces the camera, mode 1: fixed in world space. */
+const cut = { on:false, mode:0, off:0, az:0.8, el:0.3, flip:false, sweep:false };
+
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+/* Decimals derived from step — fine-grained sliders display exact values. */
+const fmtVal = p => p.v.toFixed(Math.min(Math.max(Math.ceil(-Math.log10(p.step) - 1e-9), 0), 4));
+const $ = id => document.getElementById(id);
+
+/* Bounding-sphere radius, refreshed every frame (depends on the live
+   scale parameter for box and hybrid). */
+function boxExtent(sc){
+  return sc > 1.05 ? Math.min(Math.sqrt(3)*2*(sc+1)/(sc-1), 24) : 0.0;
+}
+const BOUNDS = { bulb:2.2, julia:2.2, menger:3.2, sierp:3.2,
+                 jbulb:2.2, mcube:2.6, octa:3.4, icosa:3.0 };
+function boundFor(){
+  const f = F();
+  switch(f.id){
+    /* With the cut on, the sphere must hold the whole box, otherwise the
+       section shows up as a disc. True extent: 2(s+1)/(s-1) per axis. */
+    case 'box':    return cut.on ? boxExtent(U.u_pA.value) : Math.abs(U.u_pA.value) + 2.0;
+    case 'hybrid': return cut.on ? boxExtent(U.u_pB.value) : Math.abs(U.u_pB.value) + 2.0;
+    case 'custom': return f.bound || 0.0;
+    default:       return BOUNDS[f.id] || 0.0;   /* Apollonius: space-filling; Universe: 2^k */
+  }
+}
+
+/* ---------- Applying a specimen ---------- */
+function applyParams(){
+  const f = F();
+  if(f.custom){
+    ['pA','pB','pC','pD','pE'].forEach(k=>{ U['u_'+k].value = 0; });
+    U.u_iter.value = 12;
+  }
+  f.params.forEach(p=>{
+    if(p.k === 'iter') U.u_iter.value = p.v;
+    else U['u_'+p.k].value = p.v;
+  });
+}
+
+function applySpec(i, animate){
+  specIdx = i;
+  const f = F();
+  const src = fragFor(i);
+  if(mat.fragmentShader !== src){ mat.fragmentShader = src; mat.needsUpdate = true; }
+  applyParams();
+  thT = f.cam.t; phT = f.cam.p; diT = f.cam.d;
+  if(!animate){ th = thT - 0.9; ph = phT; di = diT*2.1; }
+  $('hdIdx').textContent = 'No. ' + String(i+1).padStart(2,'0');
+  $('hdName').textContent = f.name.toUpperCase();
+  buildParamsUI();
+  document.querySelectorAll('.spec').forEach((b,j)=>b.classList.toggle('on', j===i));
+}
+
+/* ---------- UI construction ---------- */
+function addSlider(host, p, onInput){
+  const d = document.createElement('div'); d.className = 'sl';
+  d.innerHTML = '<div class="lr"><label></label><span class="val"></span></div>';
+  d.querySelector('label').textContent = p.label;
+  const val = d.querySelector('.val');
+  const inp = document.createElement('input');
+  inp.type = 'range'; inp.min = p.min; inp.max = p.max; inp.step = p.step; inp.value = p.v;
+  const refresh = ()=>{ val.textContent = fmtVal(p); };
+  refresh();
+  inp.addEventListener('input', ()=>{
+    p.v = parseFloat(inp.value);
+    refresh();
+    onInput && onInput(p);
+  });
+  inp.addEventListener('pointerup', ()=>inp.blur());
+  d.appendChild(inp);
+  host.appendChild(d);
+}
+
+function buildParamsUI(){
+  const host = $('params'); host.innerHTML = '';
+  F().params.forEach(p=>{
+    addSlider(host, p, (q)=>{
+      if(q.k === 'iter') U.u_iter.value = q.v;
+      else U['u_'+q.k].value = q.v;
+    });
+  });
+}
+
+function palColor(pal, t){
+  return [0,1,2].map(i=>{
+    const v = pal.a[i] + pal.b[i]*Math.cos(6.28318*(t + pal.d[i]));
+    return clamp(Math.round(255*v), 0, 255);
+  });
+}
+
+function setPalette(i){
+  const pal = PALETTES[i];
+  U.u_palA.value.fromArray(pal.a);
+  U.u_palB.value.fromArray(pal.b);
+  U.u_palD.value.fromArray(pal.d);
+  $('palName').textContent = pal.name;
+  document.querySelectorAll('#palettes button').forEach((b,j)=>b.classList.toggle('on', j===i));
+}
+
+function buildPalettes(){
+  const host = $('palettes');
+  PALETTES.forEach((pal,i)=>{
+    const b = document.createElement('button');
+    b.title = pal.name; b.setAttribute('aria-label', 'Palette ' + pal.name);
+    [0,0.25,0.5,0.75,1].forEach(t=>{
+      const s = document.createElement('i');
+      const c = palColor(pal, t*0.6 + 0.05);
+      s.style.background = 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+      b.appendChild(s);
+    });
+    b.addEventListener('click', ()=>setPalette(i));
+    host.appendChild(b);
+  });
+}
+
+function buildFixedUI(){
+  addSlider($('colSliders'), {label:'Cycle', min:0, max:4, step:0.01, v:U.u_cyc.value},
+    p=>U.u_cyc.value = p.v);
+  addSlider($('colSliders'), {label:'Orbit trap', min:0, max:2, step:0.01, v:U.u_trap.value},
+    p=>U.u_trap.value = p.v);
+  addSlider($('colSliders'), {label:'Phase', min:0, max:1, step:0.005, v:U.u_phase.value},
+    p=>U.u_phase.value = p.v);
+
+  let azim = 0.6, elev = 0.5;
+  const updLight = ()=>{
+    U.u_light.value.set(
+      Math.cos(elev)*Math.cos(azim), Math.sin(elev), Math.cos(elev)*Math.sin(azim));
+  };
+  addSlider($('lightSliders'), {label:'Azimuth', min:0, max:6.28, step:0.01, v:azim},
+    p=>{ azim = p.v; updLight(); });
+  addSlider($('lightSliders'), {label:'Elevation', min:-0.4, max:1.4, step:0.01, v:elev},
+    p=>{ elev = p.v; updLight(); });
+  updLight();
+  addSlider($('lightSliders'), {label:'Shadows', min:0, max:1, step:0.01, v:U.u_shadow.value},
+    p=>U.u_shadow.value = p.v);
+  addSlider($('lightSliders'), {label:'Occlusion', min:0, max:1, step:0.01, v:U.u_ao.value},
+    p=>U.u_ao.value = p.v);
+  addSlider($('lightSliders'), {label:'Fog', min:0, max:3, step:0.01, v:U.u_fog.value},
+    p=>U.u_fog.value = p.v);
+
+  QUALITY.forEach((q,i)=>{
+    const b = document.createElement('button');
+    b.textContent = q.name;
+    b.addEventListener('click', ()=>setQuality(i));
+    $('quality').appendChild(b);
+  });
+
+  const mkToggle = (host, label, get, set)=>{
+    const d = document.createElement('div'); d.className = 'tg';
+    const l = document.createElement('label'); l.textContent = label;
+    const b = document.createElement('button'); b.className = 'sw';
+    b.setAttribute('role','switch'); b.innerHTML = '<i></i>';
+    const sync = ()=>b.classList.toggle('on', get());
+    b.addEventListener('click', ()=>{ set(!get()); sync(); });
+    d.appendChild(l); d.appendChild(b); sync();
+    host.appendChild(d);
+    toggleSyncs.push(sync);
+  };
+  /* Cutting plane */
+  mkToggle($('cutToggles'), 'Cutting plane (X)', ()=>cut.on, v=>setCut(v, true));
+  ['Facing camera','Fixed in space'].forEach((nm,i)=>{
+    const b = document.createElement('button');
+    b.textContent = nm;
+    b.addEventListener('click', ()=>setCutMode(i));
+    $('cutMode').appendChild(b);
+  });
+  addSlider($('cutSliders'), {label:'Offset', min:-4, max:4, step:0.005, v:cut.off},
+    p=>{ cut.off = p.v; });
+  addSlider($('cutSliders'), {label:'Cut face tint', min:0, max:1, step:0.01, v:U.u_cutTint.value},
+    p=>{ U.u_cutTint.value = p.v; });
+  mkToggle($('cutSliders'), 'Flip side', ()=>cut.flip, v=>cut.flip = v);
+  mkToggle($('cutSliders'), 'Sweep', ()=>cut.sweep, v=>cut.sweep = v);
+  addSlider($('cutWorld'), {label:'Plane azimuth', min:0, max:6.28, step:0.01, v:cut.az},
+    p=>{ cut.az = p.v; });
+  addSlider($('cutWorld'), {label:'Plane elevation', min:-1.57, max:1.57, step:0.01, v:cut.el},
+    p=>{ cut.el = p.v; });
+  setCutMode(0);
+
+  mkToggle($('toggles'), 'Auto rotation', ()=>autoRot, v=>autoRot = v);
+  mkToggle($('toggles'), 'Parameter drift', ()=>evolve, v=>{
+    evolve = v; if(!v) applyParams();
+  });
+}
+
+function setCut(on, fromSwitch){
+  cut.on = on;
+  U.u_cut.value = on ? 1 : 0;
+  if(!fromSwitch) toggleSyncs.forEach(fn=>fn());
+  toast(on ? 'Cutting plane on' : 'Cutting plane off');
+}
+
+function setCutMode(i){
+  cut.mode = i;
+  document.querySelectorAll('#cutMode button').forEach((b,j)=>b.classList.toggle('on', j===i));
+  $('cutWorld').classList.toggle('dimmed', i === 0);
+}
+
+function updateCut(now){
+  if(!cut.on) return;
+  const n = U.u_cutN.value;
+  if(cut.mode === 0) n.subVectors(U.u_camPos.value, U.u_camTarget.value);
+  else n.set(Math.cos(cut.el)*Math.cos(cut.az), Math.sin(cut.el), Math.cos(cut.el)*Math.sin(cut.az));
+  if(n.lengthSq() < 1e-9) n.set(0,0,1);
+  n.normalize();
+  if(cut.flip) n.negate();
+  let o = cut.off;
+  if(cut.sweep){
+    const b = U.u_bound.value > 0 ? U.u_bound.value : 2.5;
+    o += b*0.55*Math.sin(now*0.00035);
+  }
+  U.u_cutO.value = o;
+}
+
+function setQuality(i){
+  qualityIdx = i;
+  const q = QUALITY[i];
+  U.u_steps.value = q.steps;
+  renderer.setPixelRatio(Math.min(q.dpr, 2));
+  resize();
+  document.querySelectorAll('#quality button').forEach((b,j)=>b.classList.toggle('on', j===i));
+}
+
+/* ---------- Specimen list ---------- */
+function buildSpecs(){
+  const host = $('specs');
+  FRACTALS.forEach((f,i)=>{
+    const b = document.createElement('button');
+    b.className = 'spec';
+    b.innerHTML = '<span class="row"><span class="idx"></span><span class="nm"></span></span><span class="ds"></span>';
+    b.querySelector('.idx').textContent = String(i+1).padStart(2,'0');
+    b.querySelector('.nm').textContent = f.name;
+    b.querySelector('.ds').textContent = f.desc;
+    b.addEventListener('click', ()=>switchSpec(i));
+    host.appendChild(b);
+  });
+}
+
+let switching = false;
+function switchSpec(i){
+  if(switching || i === specIdx) return;
+  switching = true;
+  canvas.classList.add('faded');
+  setTimeout(()=>{
+    applySpec(i, true);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      canvas.classList.remove('faded');
+      switching = false;
+    }));
+  }, 240);
+}
+
+/* ---------- Free camera ---------- */
+function setFly(on){
+  if(on === flyMode) return;
+  flyMode = on;
+  $('flyBtn').classList.toggle('active', on);
+  if(on){
+    flyPos.copy(U.u_camPos.value);
+    const dir = new THREE.Vector3().subVectors(U.u_camTarget.value, flyPos).normalize();
+    flyPitch = Math.asin(clamp(dir.y, -1, 1));
+    flyYaw = Math.atan2(dir.x, dir.z);
+    flyVel.set(0,0,0);
+    document.body.classList.add('flying');
+    toast('Free flight — WASD to move, hold mouse to look, V to exit');
+  } else {
+    const r = Math.max(flyPos.length(), 0.3);
+    diT = clamp(r, 0.3, 40);
+    thT = Math.atan2(flyPos.x, flyPos.z);
+    phT = clamp(Math.acos(clamp(flyPos.y / r, -1, 1)), 0.05, Math.PI - 0.05);
+    document.body.classList.remove('flying');
+    toast('Orbit camera');
+  }
+}
+
+const has = c => keys.has(c);
+
+function flyTick(dt){
+  const cy = Math.cos(flyPitch);
+  const dir = new THREE.Vector3(Math.sin(flyYaw)*cy, Math.sin(flyPitch), Math.cos(flyYaw)*cy);
+  const right = new THREE.Vector3(-dir.z, 0, dir.x);
+
+  const wish = new THREE.Vector3();
+  if(has('KeyW') || has('KeyZ') || has('ArrowUp'))    wish.add(dir);
+  if(has('KeyS') || has('ArrowDown'))                 wish.sub(dir);
+  if(has('KeyD') || has('ArrowRight'))                wish.add(right);
+  if(has('KeyA') || has('KeyQ') || has('ArrowLeft'))  wish.sub(right);
+  if(has('KeyE') || has('Space'))                     wish.y += 1;
+  if(has('KeyC'))                                     wish.y -= 1;
+  if(wish.lengthSq() > 0) wish.normalize();
+
+  const spd = flySpeed * ((has('ShiftLeft') || has('ShiftRight')) ? 4 : 1);
+  flyVel.lerp(wish.multiplyScalar(spd), 1 - Math.exp(-dt*9));
+  flyPos.addScaledVector(flyVel, dt);
+
+  if(!isFinite(flyPos.x) || !isFinite(flyPos.y) || !isFinite(flyPos.z)){
+    flyPos.copy(U.u_camPos.value); flyVel.set(0,0,0);
+  }
+
+  U.u_camPos.value.copy(flyPos);
+  U.u_camTarget.value.copy(flyPos).addScaledVector(dir, 1.0);
+}
+
+/* ---------- Actions ---------- */
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+function capture(){
+  if(glLost){ toast('Render unavailable — graphics context recovering'); return; }
+  const base = Math.min(QUALITY[qualityIdx].dpr, 2);
+  let f = 2;
+  let w = innerWidth*base*f, h = innerHeight*base*f;
+  if(w*h > 36e6){ f = Math.sqrt(36e6/(innerWidth*innerHeight*base*base)); w = innerWidth*base*f; h = innerHeight*base*f; }
+  renderer.setPixelRatio(base*f);
+  renderer.setSize(innerWidth, innerHeight, false);
+  renderer.getDrawingBufferSize(U.u_res.value);
+  renderer.render(scene, camera);
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'fractalis-' + F().id + '-' + Date.now() + '.png';
+  a.click();
+  renderer.setPixelRatio(Math.min(QUALITY[qualityIdx].dpr, 2));
+  resize();
+  toast('Capture ' + Math.round(w) + ' x ' + Math.round(h) + ' saved');
+}
+
+function randomize(){
+  /* v6 fix: the iteration count is no longer randomized — pushing it to
+     the extremes was both a composition killer and a performance trap
+     now that the caps are raised. */
+  F().params.forEach(p=>{
+    if(p.k === 'iter') return;
+    const span = p.max - p.min;
+    const r = p.rr || [p.min + span*0.15, p.max - span*0.15];
+    let v = r[0] + Math.random()*(r[1] - r[0]);
+    v = Math.round(v/p.step)*p.step;
+    p.v = clamp(v, p.min, p.max);
+  });
+  if(F().id === 'julia'){
+    const q = F().params.slice(0,4);
+    const m = Math.hypot(q[0].v, q[1].v, q[2].v, q[3].v);
+    if(m > 1.0) q.forEach(p=>{ p.v = +(p.v/m*0.9).toFixed(3); });
+  }
+  applyParams();
+  buildParamsUI();
+  setPalette(Math.floor(Math.random()*PALETTES.length));
+  thT = Math.random()*Math.PI*2;
+  toast('Specimen randomized');
+}
+
+function resetCam(){
+  const c = F().cam;
+  thT = c.t; phT = c.p; diT = c.d;
+  toast('Framing reset');
+}
+
+/* ---------- Events ---------- */
+function resize(){
+  renderer.setSize(innerWidth, innerHeight, false);
+  renderer.getDrawingBufferSize(U.u_res.value);
+}
+window.addEventListener('resize', resize);
+
+canvas.addEventListener('webglcontextlost', e=>{
+  e.preventDefault();
+  glLost = true;
+  toast('Graphics context lost — recovering…');
+});
+canvas.addEventListener('webglcontextrestored', ()=>{
+  glLost = false;
+  if(qualityIdx > 0){
+    setQuality(qualityIdx - 1);
+    toast('Context restored — quality lowered to keep rendering stable');
+  } else {
+    resize();
+    toast('Graphics context restored');
+  }
+});
+
+const pts = new Map();
+let pinchD = 0;
+canvas.addEventListener('pointerdown', e=>{
+  canvas.setPointerCapture(e.pointerId);
+  pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(pts.size === 2){
+    const [a,b] = [...pts.values()];
+    pinchD = Math.hypot(a.x-b.x, a.y-b.y);
+  }
+  canvas.classList.add('grabbing');
+});
+canvas.addEventListener('pointermove', e=>{
+  if(!pts.has(e.pointerId)) return;
+  const prev = pts.get(e.pointerId);
+  const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+  pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(pts.size === 1){
+    if(flyMode){
+      flyYaw   -= dx*0.0032;
+      flyPitch  = clamp(flyPitch - dy*0.0032, -1.55, 1.55);
+    } else {
+      thT -= dx*0.005;
+      phT = clamp(phT - dy*0.005, 0.05, Math.PI - 0.05);
+    }
+  } else if(pts.size === 2){
+    const [a,b] = [...pts.values()];
+    const d = Math.hypot(a.x-b.x, a.y-b.y);
+    if(pinchD > 0){
+      if(flyMode) flySpeed = clamp(flySpeed*pinchD/d, 0.05, 8);
+      else diT = clamp(diT*pinchD/d, 0.3, 40);
+    }
+    pinchD = d;
+  }
+});
+const release = e=>{
+  pts.delete(e.pointerId);
+  if(pts.size < 2) pinchD = 0;
+  if(pts.size === 0) canvas.classList.remove('grabbing');
+};
+canvas.addEventListener('pointerup', release);
+canvas.addEventListener('pointercancel', release);
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault();
+  if(flyMode){
+    flySpeed = clamp(flySpeed*Math.exp(-e.deltaY*0.0012), 0.05, 8);
+  } else {
+    diT = clamp(diT*Math.exp(e.deltaY*0.001), 0.3, 40);
+  }
+}, {passive:false});
+
+window.addEventListener('keydown', e=>{
+  const tg0 = (e.target && e.target.tagName) || '';
+  if(tg0 === 'TEXTAREA' || tg0 === 'SELECT' || (e.target && e.target.isContentEditable)){
+    if(e.key === 'Escape') closeEditor();
+    return;   /* typing in the editor: no shortcuts, no free-camera keys */
+  }
+  keys.add(e.code);
+  /* No shortcuts under Ctrl/Cmd/Alt (Ctrl+R must just reload), and
+     Space/Arrows are only captured when no control has focus — range
+     inputs keep arrow-key control. */
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = (e.target && e.target.tagName) || '';
+  const onCtl = (tag === 'INPUT' || tag === 'BUTTON');
+  if(!onCtl && (e.code === 'Space' || e.code.startsWith('Arrow'))) e.preventDefault();
+  const k = e.key.toLowerCase();
+  if(k === 'h') document.body.classList.toggle('cinema');
+  else if(k === 'p') document.body.classList.toggle('folded');
+  else if(k === 'v') setFly(!flyMode);
+  else if(k === 'x') setCut(!cut.on);
+  else if(k === 'f'){ e.preventDefault(); toggleEditor(); }
+  else if(k === 'escape') closeEditor();
+  else if(k === 'r'){ setFly(false); resetCam(); }
+  else if(k === ' ' && !flyMode && !onCtl){
+    autoRot = !autoRot;
+    toast(autoRot ? 'Rotation resumed' : 'Rotation paused');
+    toggleSyncs.forEach(fn=>fn());
+  }
+});
+window.addEventListener('keyup', e=>keys.delete(e.code));
+window.addEventListener('blur', ()=>keys.clear());
+
+ $('foldBtn').addEventListener('click', ()=>document.body.classList.add('folded'));
+ $('tabBtn').addEventListener('click', ()=>document.body.classList.remove('folded'));
+ $('capBtn').addEventListener('click', capture);
+ $('flyBtn').addEventListener('click', ()=>setFly(!flyMode));
+ $('rndBtn').addEventListener('click', randomize);
+ $('cineBtn').addEventListener('click', ()=>document.body.classList.add('cinema'));
+ $('eyeBtn').addEventListener('click', ()=>document.body.classList.remove('cinema'));
+
+/* ---------- Formula editor ---------- */
+const STARTER = `// Starter formula: a folded, twisted kaleidoscope.
+// @param pA "Scale" 1.6 3 2.2
+// @param pB "Twist" -0.5 0.5 0.15
+// @param pC "Offset" 0 1.2 0.6
+// @iter 2 24 10
+// @bound 3
+// @cam 3.4
+float deFractal(vec3 p){
+  float s = 1.0, tr = 1e9;
+  vec3 off = vec3(1.0, u_pC, 0.3);
+  int it = int(u_iter + 0.5);
+  for(int i=0;i<26;i++){
+    if(i >= it) break;
+    p = abs(p);                       // mirror fold
+    if(p.x < p.y) p.xy = p.yx;        // sort fold
+    p.xz = rot2(u_pB)*p.xz;           // twist
+    p = p*u_pA - off*(u_pA - 1.0);    // scale around the offset
+    s *= u_pA;
+    tr = min(tr, length(p)/s);
+  }
+  g_trap = tr;
+  return (length(p) - 1.2)/s;
+}
+`;
+const WS_KEY = 'fractalis.workshop.v1';
+let workshopSrc = STARTER;
+let edTouched = false, edLive = false, edTimer = 0, edLoaded = STARTER;
+const edCode = $('edCode'), edGutter = $('edGutter'), edLog = $('edLog');
+
+function niceStep(x){
+  const e = Math.pow(10, Math.floor(Math.log10(x)));
+  const m = x/e;
+  return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10)*e;
+}
+
+/* Comment directives: @param, @iter, @bound, @cam */
+function parseDirectives(src){
+  const out = { params:[], bound:null, cam:null, warnings:[] };
+  const seen = new Set();
+  src.split('\n').forEach((line, li)=>{
+    const m = line.match(/^\s*\/\/\s*@(\w+)\s*(.*)$/);
+    if(!m) return;
+    const tag = m[1], rest = m[2].trim();
+    const where = 'Line ' + (li+1) + ': ';
+    const nums = str => str.split(/\s+/).filter(Boolean).map(Number);
+    if(tag === 'param'){
+      const pm = rest.match(/^(p[A-E])\s+"([^"]*)"\s+(.*)$/);
+      if(!pm){ out.warnings.push(where + '@param expects: pA "Label" min max value [step]'); return; }
+      const v = nums(pm[3]);
+      if(v.length < 3 || v.some(x=>!isFinite(x)) || v[0] >= v[1]){
+        out.warnings.push(where + 'invalid range for ' + pm[1]); return;
+      }
+      if(seen.has(pm[1])){ out.warnings.push(where + pm[1] + ' declared twice'); return; }
+      seen.add(pm[1]);
+      out.params.push({ k:pm[1], label:pm[2] || pm[1], min:v[0], max:v[1],
+        v:clamp(v[2], v[0], v[1]), step: v[3] > 0 ? v[3] : niceStep((v[1]-v[0])/400) });
+    } else if(tag === 'iter'){
+      const v = nums(rest);
+      if(v.length < 3 || v.some(x=>!isFinite(x)) || v[0] >= v[1]){
+        out.warnings.push(where + '@iter expects: min max value'); return;
+      }
+      out.params.push({ k:'iter', label:'Iterations', min:Math.round(v[0]), max:Math.round(v[1]),
+        step:1, v:Math.round(clamp(v[2], v[0], v[1])) });
+    } else if(tag === 'bound'){
+      const v = parseFloat(rest);
+      if(isFinite(v) && v >= 0) out.bound = v; else out.warnings.push(where + '@bound expects a radius');
+    } else if(tag === 'cam'){
+      const v = parseFloat(rest);
+      if(isFinite(v) && v > 0) out.cam = clamp(v, 0.3, 40); else out.warnings.push(where + '@cam expects a distance');
+    }
+  });
+  /* Iterations slider last, like the built-in specimens */
+  out.params.sort((a,b)=>(a.k === 'iter') - (b.k === 'iter'));
+  return out;
+}
+
+/* Keep the user's slider positions across recompiles when the
+   declaration of that parameter did not change. */
+function mergeParams(oldP, newP){
+  return newP.map(p=>{
+    const o = oldP.find(q=>q.k === p.k);
+    if(o && o.min === p.min && o.max === p.max && o.def === p.v) return Object.assign(p, {v:o.v, def:p.v});
+    return Object.assign(p, {def:p.v});
+  });
+}
+
+function templateBound(f){
+  if(f.id === 'box')    return +(f.params.find(p=>p.k==='pA').max + 2).toFixed(2);
+  if(f.id === 'hybrid') return +(f.params.find(p=>p.k==='pB').max + 2).toFixed(2);
+  return BOUNDS[f.id] || 0;
+}
+
+function templateFor(i){
+  const f = FRACTALS[i];
+  let h = '// Workshop formula, forked from ' + f.name + '\n';
+  f.params.forEach(p=>{
+    if(p.k === 'iter') h += '// @iter ' + p.min + ' ' + p.max + ' ' + p.v + '\n';
+    else h += '// @param ' + p.k + ' "' + p.label + '" ' + p.min + ' ' + p.max + ' ' + p.v + ' ' + p.step + '\n';
+  });
+  h += '// @bound ' + templateBound(f) + '\n// @cam ' + f.cam.d + '\n';
+  return h + DE_CHUNKS[i].trim() + '\n';
+}
+
+/* Compile on the renderer's own context with the same preamble three.js
+   uses, so errors are caught before the live shader is replaced. */
+function validateFrag(src){
+  const gl = renderer.getContext();
+  if(gl.isContextLost()) return { ok:false, errors:[{line:0, msg:'Graphics context lost, try again in a moment'}] };
+  const gl2 = renderer.capabilities && renderer.capabilities.isWebGL2;
+  const pre = (gl2
+      ? '#version 300 es\n#define varying in\nout highp vec4 pc_fragColor;\n#define gl_FragColor pc_fragColor\n'
+      : '') + 'precision highp float;\nprecision highp int;\n' + FRAG_HEAD;
+  const sh = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(sh, pre + src + FRAG_TAIL);
+  gl.compileShader(sh);
+  const ok = gl.getShaderParameter(sh, gl.COMPILE_STATUS);
+  const log = gl.getShaderInfoLog(sh) || '';
+  gl.deleteShader(sh);
+  if(ok) return { ok:true, errors:[] };
+  const offset = pre.split('\n').length - 1;
+  const nUser = src.split('\n').length;
+  const errors = [];
+  log.split('\n').forEach(l=>{
+    const m = l.match(/ERROR:\s*\d+:(\d+):\s*(.*)$/);
+    if(!m) return;
+    const L = parseInt(m[1], 10) - offset;
+    if(L >= 1 && L <= nUser) errors.push({ line:L, msg:m[2] });
+    else errors.push({ line:0, msg:'engine code: ' + m[2] +
+      (/deFractal/.test(m[2]) ? ' (is float deFractal(vec3 p) defined?)' : '') });
+  });
+  if(!errors.length) errors.push({ line:0, msg:log.trim() || 'Unknown compile error' });
+  return { ok:false, errors };
+}
+
+function edGutterRefresh(errLines){
+  const n = edCode.value.split('\n').length;
+  const bad = new Set(errLines || []);
+  let h = '';
+  for(let i=1;i<=n;i++) h += (bad.has(i) ? '<b>' + i + '</b>' : i) + '\n';
+  edGutter.innerHTML = h;
+  edGutter.scrollTop = edCode.scrollTop;
+}
+
+function edGoto(line){
+  const lines = edCode.value.split('\n');
+  let pos = 0;
+  for(let i=0;i<line-1 && i<lines.length;i++) pos += lines[i].length + 1;
+  edCode.focus();
+  edCode.setSelectionRange(pos, pos + (lines[line-1] || '').length);
+  edCode.scrollTop = Math.max(0, (line - 4)*17);
+}
+
+function edReport(res, warnings, note){
+  edLog.innerHTML = '';
+  if(res.ok){
+    const s = document.createElement('span'); s.className = 'ok';
+    s.textContent = note || 'Compiled. Running in the Workshop specimen.';
+    edLog.appendChild(s);
+  } else {
+    res.errors.forEach(er=>{
+      const b = document.createElement('button'); b.className = 'e';
+      b.textContent = (er.line ? 'Line ' + er.line + ': ' : '') + er.msg;
+      if(er.line) b.addEventListener('click', ()=>edGoto(er.line));
+      edLog.appendChild(b);
+    });
+  }
+  (warnings || []).forEach(w=>{
+    const s = document.createElement('span'); s.className = 'warn'; s.textContent = w;
+    edLog.appendChild(s);
+  });
+  edGutterRefresh(res.ok ? [] : res.errors.map(e=>e.line).filter(Boolean));
+}
+
+function applyWorkshop(src, opts){
+  opts = opts || {};
+  const res = validateFrag(src);
+  if(!res.ok){ if(!opts.quiet) edReport(res); return false; }
+  const d = parseDirectives(src);
+  const f = FRACTALS[CUSTOM];
+  f.params = mergeParams(f.params, d.params);
+  f.bound = d.bound !== null ? d.bound : 3;
+  if(d.cam !== null) f.cam.d = d.cam;
+  const first = f.params.find(p=>p.k !== 'iter');
+  f.evolve = first ? first.k : null;
+  DE_CHUNKS[CUSTOM] = src;
+  fragCache[CUSTOM] = null;
+  workshopSrc = src;
+  if(!opts.quiet) edReport(res, d.warnings);
+  if(opts.noSwitch) return true;
+  if(specIdx === CUSTOM){
+    mat.fragmentShader = fragFor(CUSTOM);
+    mat.needsUpdate = true;
+    applyParams();
+    buildParamsUI();
+  } else {
+    switchSpec(CUSTOM);
+  }
+  return true;
+}
+
+function initWorkshop(){
+  let saved = null;
+  try { saved = localStorage.getItem(WS_KEY); } catch(e) {}
+  if(saved && applyWorkshop(saved, {quiet:true, noSwitch:true})){
+    edLoaded = saved;
+  } else {
+    applyWorkshop(STARTER, {quiet:true, noSwitch:true});
+    edLoaded = STARTER;
+  }
+  edCode.value = workshopSrc;
+
+  const sel = $('edTpl');
+  const opt = (v, t)=>{ const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
+  opt('', 'Load a template');
+  opt('starter', 'Starter kaleidoscope');
+  opt('saved', 'Last saved formula');
+  for(let i=0;i<CUSTOM;i++) opt(String(i), String(i+1).padStart(2,'0') + '  ' + FRACTALS[i].name);
+  sel.addEventListener('change', ()=>{
+    const v = sel.value;
+    sel.value = '';
+    if(!v) return;
+    let src;
+    if(v === 'starter') src = STARTER;
+    else if(v === 'saved'){
+      try { src = localStorage.getItem(WS_KEY); } catch(e) {}
+      if(!src){ toast('No saved formula in this browser yet'); return; }
+    } else src = templateFor(parseInt(v, 10));
+    if(edCode.value !== edLoaded && edCode.value !== workshopSrc &&
+       !confirm('Replace the code in the editor? Unsaved changes will be lost.')) return;
+    edLoad(src);
+    applyWorkshop(src);
+  });
+  edGutterRefresh();
+}
+
+function edLoad(src){
+  edCode.value = src;
+  edLoaded = src;
+  edCode.scrollTop = 0;
+  edTouched = true;
+  edGutterRefresh();
+}
+
+function openEditor(){
+  if(!document.body.classList.contains('editing')){
+    document.body.classList.add('editing');
+    if(!edTouched && specIdx !== CUSTOM){
+      edLoad(templateFor(specIdx));
+      edTouched = false;
+      edReport({ok:true}, [], 'Template: ' + F().name + '. Compile to fork it into the Workshop.');
+    }
+    setTimeout(()=>edCode.focus({preventScroll:true}), 60);
+  }
+}
+function closeEditor(){
+  if(!document.body.classList.contains('editing')) return;
+  document.body.classList.remove('editing');
+  edCode.blur();
+}
+function toggleEditor(){
+  if(document.body.classList.contains('editing')) closeEditor(); else openEditor();
+}
+
+function edSave(){
+  try {
+    localStorage.setItem(WS_KEY, edCode.value);
+    toast('Formula saved in this browser');
+  } catch(e) {
+    toast('Saving failed: local storage is unavailable here');
+  }
+}
+
+function edInsert(text){
+  /* execCommand keeps the native undo stack; setRangeText is the fallback */
+  if(!document.execCommand || !document.execCommand('insertText', false, text)){
+    edCode.setRangeText(text, edCode.selectionStart, edCode.selectionEnd, 'end');
+    edCode.dispatchEvent(new Event('input'));
+  }
+}
+
+edCode.addEventListener('keydown', e=>{
+  const mod = e.ctrlKey || e.metaKey;
+  if(mod && e.key === 'Enter'){ e.preventDefault(); applyWorkshop(edCode.value); }
+  else if(mod && (e.key === 's' || e.key === 'S')){ e.preventDefault(); edSave(); }
+  else if(e.key === 'Tab' && !mod){ e.preventDefault(); edInsert('  '); }
+  else if(e.key === 'Enter' && !mod && !e.shiftKey){
+    const before = edCode.value.slice(0, edCode.selectionStart);
+    const cur = before.slice(before.lastIndexOf('\n') + 1);
+    let ind = (cur.match(/^\s*/) || [''])[0];
+    if(/\{\s*$/.test(cur)) ind += '  ';
+    e.preventDefault();
+    edInsert('\n' + ind);
+  }
+});
+edCode.addEventListener('input', ()=>{
+  edTouched = true;
+  edGutterRefresh();
+  if(edLive){
+    clearTimeout(edTimer);
+    edTimer = setTimeout(()=>applyWorkshop(edCode.value), 650);
+  }
+});
+edCode.addEventListener('scroll', ()=>{ edGutter.scrollTop = edCode.scrollTop; });
+
+ $('edRun').addEventListener('click', ()=>applyWorkshop(edCode.value));
+ $('edSave').addEventListener('click', edSave);
+ $('edCopy').addEventListener('click', ()=>{
+  const done = ()=>toast('Formula copied');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(edCode.value).then(done, ()=>{ edCode.select(); document.execCommand('copy'); done(); });
+  } else { edCode.select(); document.execCommand('copy'); done(); }
+});
+ $('edLive').addEventListener('click', ()=>{
+  edLive = !edLive;
+  $('edLive').classList.toggle('on', edLive);
+  if(edLive) applyWorkshop(edCode.value);
+});
+ $('edClose').addEventListener('click', closeEditor);
+ $('edBtn').addEventListener('click', toggleEditor);
+
+/* ---------- Render loop ---------- */
+let prev = performance.now(), fcnt = 0, ft = prev;
+let frames = 0, revealed = false, lowStreak = 0;
+const bootAt = performance.now();
+
+function tick(now){
+  requestAnimationFrame(tick);
+  const dt = Math.min((now - prev)/1000, 0.1);
+  prev = now;
+
+  if(glLost) return;
+  U.u_time.value = now*0.001;
+  U.u_bound.value = boundFor();
+
+  if(flyMode){
+    flyTick(dt);
+  } else {
+    if(autoRot && pts.size === 0) thT += dt*0.06;
+    if(!isFinite(th) || !isFinite(ph) || !isFinite(di)){ th = thT; ph = phT; di = diT; }
+    const k = 1 - Math.exp(-dt*7);
+    th += (thT - th)*k;
+    ph += (phT - ph)*k;
+    di += (diT - di)*k;
+    U.u_camPos.value.set(
+      di*Math.sin(ph)*Math.sin(th),
+      di*Math.cos(ph),
+      di*Math.sin(ph)*Math.cos(th)
+    );
+    U.u_camTarget.value.set(0,0,0);
+  }
+
+  updateCut(now);
+
+  if(evolve){
+    const f = F();
+    const p = f.evolve ? f.params.find(q=>q.k === f.evolve) : null;
+    if(p){
+    const amp = (p.max - p.min)*0.06;
+    U['u_'+p.k].value = clamp(p.v + amp*Math.sin(now*0.0005), p.min, p.max);
+    }
+  }
+
+  renderer.render(scene, camera);
+
+  frames++;
+  if(!revealed && frames >= 2){
+    revealed = true;
+    canvas.classList.remove('faded');
+  }
+
+  fcnt++;
+  if(now - ft > 500){
+    const fps = fcnt*1000/(now - ft);
+    const ms = (1000/fps).toFixed(1);
+    const s = U.u_res.value;
+    const fly = flyMode ? ' · FLY x' + (flySpeed < 1 ? flySpeed.toFixed(2) : flySpeed.toFixed(1)) : '';
+    $('stats').innerHTML =
+      '<b>' + Math.round(fps) + ' FPS</b> · ' + ms + ' MS · ' + s.x + 'x' + s.y +
+      ' · ' + Math.round(U.u_steps.value) + ' STEPS' + (cut.on ? ' · CUT' : '') + fly;
+    fcnt = 0; ft = now;
+
+    if(now - bootAt > 2500 && qualityIdx > 0){
+      if(fps < 13){
+        lowStreak++;
+        if(lowStreak >= 5){
+          setQuality(qualityIdx - 1);
+          lowStreak = 0;
+          toast('Quality lowered automatically to preserve fluidity');
+        }
+      } else lowStreak = 0;
+    }
+  }
+}
+
+/* ---------- Boot (guarded) ---------- */
+try {
+  initWorkshop();
+  buildSpecs();
+  buildPalettes();
+  buildFixedUI();
+  setPalette(0);
+  setQuality(1);
+  applySpec(0, false);
+  resize();
+  requestAnimationFrame(tick);
+} catch(err){
+  console.error(err);
+  fatal('Initialization failed: ' + (err && err.message ? err.message : err));
+}
+</script>
+</body>
+</html>
